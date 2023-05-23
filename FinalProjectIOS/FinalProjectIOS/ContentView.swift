@@ -39,59 +39,230 @@ class UserViewModel: ObservableObject {
 
 struct UserItem: View {
     let user: User
+    var onDelete: () -> Void
     
     var body: some View {
-        VStack {
-            WebImage(url: URL(string: user.image))
-                .resizable()
-                .aspectRatio(contentMode: .fit)
-                .frame(width: 48, height: 48)
-                .clipShape(Circle())
+        HStack {
             
-            Text("Name: \(user.firstName) \(user.lastName)")
-                .font(.headline)
-            
-            Text("Age: \(user.age)")
-                .font(.body)
-                .foregroundColor(.gray)
-            
-            Text("Email: \(user.email)")
-                .font(.body)
-                .foregroundColor(.gray)
+            VStack {
+                WebImage(url: URL(string: user.image))
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 48, height: 48)
+                    .clipShape(Circle())
+                
+                Text("Name: \(user.firstName) \(user.lastName)")
+                    .font(.headline)
+                
+                Text("Age: \(user.age)")
+                    .font(.body)
+                    .foregroundColor(.gray)
+                
+                Text("Email: \(user.email)")
+                    .font(.body)
+                    .foregroundColor(.gray)
+            }
+            .padding(8)
+            .frame(maxWidth: .infinity)
+            .background(Color.white)
+            .overlay(
+                RoundedRectangle(cornerRadius: 4)
+                    .stroke(Color.gray, lineWidth: 1)
+            )
+            .padding(8)
+            Spacer()
+                        
+                Button(action: onDelete) {
+                    Image(systemName: "trash")
+                        .foregroundColor(.red)
+                }
+                .padding(.trailing)
         }
-        .padding(8)
-        .frame(maxWidth: .infinity)
-        .background(Color.white)
-        .overlay(
-            RoundedRectangle(cornerRadius: 4)
-                .stroke(Color.gray, lineWidth: 1)
-        )
-        .padding(8)
+    }
+}
+
+struct SearchBar: View {
+    @Binding var text: String
+    
+    var body: some View {
+        HStack {
+            TextField("Search", text: $text)
+                .textFieldStyle(RoundedBorderTextFieldStyle())
+            
+            Button(action: {
+                text = ""
+            }) {
+                Image(systemName: "xmark.circle.fill")
+                    .foregroundColor(.gray)
+                    .padding(.trailing, 16)
+                    .opacity(text.isEmpty ? 0 : 1)
+            }
+        }
+        .padding(.horizontal)
     }
 }
 
 struct ContentView: View {
     @StateObject var userViewModel = UserViewModel()
+    @State private var searchBar = ""
+    @State private var isAddingUser = false
+    @State private var userFirstName = ""
+    @State private var userLastName = ""
+    @State private var userAge = ""
+    @State private var userEmail = ""
+    
+    var filteredUsers: [User] {
+        if(searchBar.isEmpty) {
+            return userViewModel.userArray
+        } else {
+            return userViewModel.userArray.filter { user in
+                
+                let ageString = String(user.age)
+                
+                return user.firstName.localizedCaseInsensitiveContains(searchBar) ||
+                user.lastName.localizedCaseInsensitiveContains(searchBar) ||
+                user.email.localizedCaseInsensitiveContains(searchBar) ||
+                ageString.localizedCaseInsensitiveContains(searchBar)
+            }
+        }
+    }
     
     var body: some View {
         NavigationView {
-            ScrollView {
-                LazyVStack {
-                    ForEach(userViewModel.userArray, id: \.id) { user in
-                        
-                        UserItem(user: user)
+            VStack {
+                
+                SearchBar(text: $searchBar)
+                
+                ScrollView {
+                    LazyVStack {
+                        ForEach(filteredUsers, id: \.id) { user in
+                            
+                            UserItem(user: user) {
+                                deleteUser(user)
+                            }
+                        }
                     }
+                    .padding(.vertical)
                 }
-                .padding(.vertical)
+                Button(action: {
+                    isAddingUser = true
+                }) {
+                    Text("Add User")
+                        .font(.headline)
+                        .padding()
+                        .background(Color.blue)
+                        .foregroundColor(.white)
+                        .cornerRadius(10)
+                }
+                .padding()
             }
-            
             .navigationTitle("Users")
+            .sheet(isPresented: $isAddingUser) {
+                
+                addUserView()
+                    .presentationDetents([.fraction(0.5)])
+            }
         }
         .onAppear {
             userViewModel.fetchUsers()
         }
     }
+    
+    func addUserView() -> some View {
+        VStack {
+            TextField("firstname", text: $userFirstName)
+                .textFieldStyle(RoundedBorderTextFieldStyle())
+                .padding()
+            
+            TextField("lastname", text: $userLastName)
+                .textFieldStyle(RoundedBorderTextFieldStyle())
+                .padding()
+            
+            TextField("age", text: $userAge)
+                .textFieldStyle(RoundedBorderTextFieldStyle())
+                .padding()
+            
+            TextField("email", text: $userEmail)
+                .textFieldStyle(RoundedBorderTextFieldStyle())
+                .padding()
+            
+            HStack {
+                Button(action: {
+                    addUser(firstName: userFirstName, lastName: userLastName, age: userAge, email: userEmail)
+                    isAddingUser = false
+                }) {
+                    Text("Add")
+                        .font(.headline)
+                        .padding()
+                        .frame(maxWidth: .infinity)
+                        .background(Color.blue)
+                        .foregroundColor(.white)
+                        .cornerRadius(10)
+                }
+                
+                Button(action: {
+                    isAddingUser = false
+                }) {
+                    Text("Cancel")
+                        .font(.headline)
+                        .padding()
+                        .frame(maxWidth: .infinity)
+                        .background(Color.red)
+                        .foregroundColor(.white)
+                        .cornerRadius(10)
+                }
+            }
+            .padding(.horizontal)
+        }
+        .padding(.horizontal)
+            .background(Color.white)
+            .cornerRadius(10)
+    }
+    
+    func addUser(firstName: String, lastName: String, age: String, email: String) {
+        let parameters: [String: Any] = [
+            "firstName": firstName,
+            "lastName": lastName,
+            "age": age,
+            "email": email
+        ]
         
+        AF.request("https://dummyjson.com/users", method: .post, parameters: parameters, encoding: JSONEncoding.default).response { response in
+            switch response.result {
+            case .success:
+                let newUser = User(
+                    id: userViewModel.userArray.count + 1,
+                    firstName: userFirstName,
+                    lastName: userLastName,
+                    age: Int(userAge)!,
+                    email: userEmail,
+                    image: "https://robohash.org/\(userFirstName + userLastName)"
+                )
+                userViewModel.userArray.append(newUser)
+                userFirstName = ""
+                userLastName = ""
+                userAge = ""
+                userEmail = ""
+                print(parameters)
+            case .failure(let error):
+                print("Error: \(error.localizedDescription)")
+            }
+        }
+    }
+    
+    func deleteUser(_ user: User) {
+        let url = "https://dummyjson.com/users/\(user.id)"
+        
+        AF.request(url, method: .delete).response { response in
+            switch response.result {
+            case .success:
+                let updatedUsers = userViewModel.userArray.filter { user.id != $0.id }
+                userViewModel.userArray = updatedUsers
+            case .failure(let error):
+                print("Error: \(error.localizedDescription)")
+            }
+        }
+    }
 }
 
 
