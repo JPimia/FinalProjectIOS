@@ -9,22 +9,39 @@ import SwiftUI
 import Alamofire
 import SDWebImageSwiftUI
 
+/// Represents a user with various properties.
 struct User: Decodable {
+    /// The unique identifier of the user.
     let id: Int
+    
+    /// The first name of the user.
     let firstName: String
+    
+    /// The last name of the user.
     let lastName: String
+    
+    /// The age of the user.
     let age: Int
+    
+    /// The email address of the user.
     let email: String
+    
+    /// The URL of the user's profile image.
     let image: String
 }
 
+/// Represents the data model containing an array of users.
 struct Data: Decodable {
+    /// The array of users.
     var users: Array<User>
 }
 
+/// A view model for managing the user data.
 class UserViewModel: ObservableObject {
+    /// The array of users, published as an observable property.
     @Published var userArray: [User] = []
     
+    /// Fetches users from a remote server.
     func fetchUsers() {
         AF.request("https://dummyjson.com/users").responseDecodable(of: Data.self) { response in
             switch response.result {
@@ -37,6 +54,7 @@ class UserViewModel: ObservableObject {
     }
 }
 
+/// A view representing an individual user item in the list.
 struct UserItem: View {
     let user: User
     var onDelete: () -> Void
@@ -81,6 +99,7 @@ struct UserItem: View {
     }
 }
 
+/// A view representing the search bar component.
 struct SearchBar: View {
     @Binding var text: String
     
@@ -102,6 +121,7 @@ struct SearchBar: View {
     }
 }
 
+/// The main view of the app.
 struct ContentView: View {
     @StateObject var userViewModel = UserViewModel()
     @State private var searchBar = ""
@@ -111,6 +131,7 @@ struct ContentView: View {
     @State private var userAge = ""
     @State private var userEmail = ""
     
+    /// The list of users filtered based on the search query.
     var filteredUsers: [User] {
         if(searchBar.isEmpty) {
             return userViewModel.userArray
@@ -168,6 +189,7 @@ struct ContentView: View {
         }
     }
     
+    /// Returns a view for adding a new user.
     func addUserView() -> some View {
         VStack {
             TextField("firstname", text: $userFirstName)
@@ -219,6 +241,7 @@ struct ContentView: View {
             .cornerRadius(10)
     }
     
+    /// Adds a new user to the server and updates the user array.
     func addUser(firstName: String, lastName: String, age: String, email: String) {
         let parameters: [String: Any] = [
             "firstName": firstName,
@@ -250,6 +273,7 @@ struct ContentView: View {
         }
     }
     
+    /// Deletes a user from the server and updates the user array.
     func deleteUser(_ user: User) {
         let url = "https://dummyjson.com/users/\(user.id)"
         
@@ -265,7 +289,7 @@ struct ContentView: View {
     }
 }
 
-
+/// A preview provider for the `ContentView` view.
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
         ContentView()
