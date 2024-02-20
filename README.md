@@ -1,6 +1,6 @@
-# Final IOS Project
+# User Management IOS
 
-Final Project iOS is an iOS app developed using SwiftUI. It fetches user data from a remote server and allows users to view, search, add, and delete user records. The app uses Alamofire for networking and SDWebImageSwiftUI for image loading.
+SwiftUIUserManagement_IOS is an iOS app developed using SwiftUI. It fetches user data from a remote server and allows users to view, search, add, and delete user records. The app uses Alamofire for networking and SDWebImageSwiftUI for image loading.
 
 ## Features
 
@@ -26,4 +26,3 @@ Final Project iOS is an iOS app developed using SwiftUI. It fetches user data fr
 - Press the red "Trash Can" to delete that user.
 - Search for users by name or age using the search bar.
 
-Screencast: https://www.youtube.com/watch?v=XuZDLinCUn0
